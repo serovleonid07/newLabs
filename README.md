@@ -8,4 +8,5 @@
 -	Клиенты, пришедшие в зал
 -	Инструктора/тренера
 -	Администраторы зала
+##
 ![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/src/main/resours/diagram.png)
