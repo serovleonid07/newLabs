@@ -1,0 +1,26 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+actor "Пользователь" as User
+package "Система" {
+    usecase "Вход в систему" as UC_Login
+    usecase "Отзыв" as comment
+    usecase "Удалять/добавлять инветарь" as add_delete_inv
+    usecase "Удалять/добавлять пользователей" as add_delete_us
+    usecase "Получать отчет" as report
+    usecase "Возвращать инвентарь" as return
+    usecase "Брать инвентарь" as take
+}
+actor "Тренер" as Trener
+actor "Администратор" as Admin
+User --> UC_Login
+User --> comment
+Trener --> UC_Login
+Trener --> comment
+Trener --> return
+Trener --> take
+Admin --> UC_Login
+Admin --> add_delete_inv
+Admin --> add_delete_us
+Admin --> report
+@enduml
