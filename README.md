@@ -43,4 +43,4 @@
 ![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/src/main/resours/diagram.png)
 
 ## ER-диаграммa базы данных
-![ER-диаграммf базы данных](src/main/resours/My First Board.jpg)
+![ER-диаграммf базы данных](https://github.com/serovleonid07/newLabs/blob/main/src/main/resours/My%20First%20Board.jpg)
