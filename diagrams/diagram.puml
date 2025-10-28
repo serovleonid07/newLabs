@@ -13,14 +13,14 @@ package "Система" {
 }
 actor "Тренер" as Trener
 actor "Администратор" as Admin
-User --> UC_Login
-User --> comment
-Trener --> UC_Login
-Trener --> comment
-Trener --> return
-Trener --> take
-Admin --> UC_Login
-Admin --> add_delete_inv
-Admin --> add_delete_us
-Admin --> report
+User -- UC_Login
+User -- comment
+Trener -- UC_Login
+Trener -- comment
+Trener -- return
+Trener -- take
+Admin -- UC_Login
+Admin -- add_delete_inv
+Admin -- add_delete_us
+Admin -- report
 @enduml

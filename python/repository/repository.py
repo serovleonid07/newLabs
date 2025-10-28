@@ -2,7 +2,7 @@ import sqlite3
 from sqlite3 import Connection
 # Импортируем адаптированные модели (предполагая, что они находятся в src.models.models или models.py)
 # В реальном коде вам нужно убедиться, что путь импорта верен.
-from models.models import Coach, User, Booking # Используем dataclass-модели из предыдущего ответа
+from models.models import Coach, Booking # Используем dataclass-модели из предыдущего ответа
 
 
 class Repository:
