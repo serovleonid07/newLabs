@@ -40,7 +40,7 @@
 - Бронь для тренера: какой тренер какой инвентарь взял для какого клиента, 2 отзыва дата-время, когда взял, дата-время, когда вернул
 
 ## Основные процессы системы
-![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/src/main/resours/diagram.png)
+![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/resours/diagram.png)
 
 ## Действия с Пользователем
 ![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/resours/B1.png)
@@ -49,4 +49,4 @@
 ![Основные процессы системы](https://github.com/serovleonid07/newLabs/blob/main/resours/B2.png)
 
 ## ER-диаграммa базы данных
-![ER-диаграммf базы данных](https://github.com/serovleonid07/newLabs/blob/main/src/main/resours/My%20First%20Board.jpg)
+![ER-диаграммf базы данных](https://github.com/serovleonid07/newLabs/blob/main/resours/My%20First%20Board.jpg)
