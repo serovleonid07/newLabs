@@ -1,8 +1,9 @@
 import sqlite3
 from sqlite3 import Connection
 from datetime import datetime
-from typing import Dict, Tuple, Callable, List
-import sys 
+from typing import Dict, Tuple, Callable, List, Any
+import sys
+import json
 
 # =================================================================
 # === 1. УПРАВЛЕНИЕ БД: СОЕДИНЕНИЕ, СТРУКТУРА И ДАННЫЕ (Utility) ===
@@ -764,6 +765,49 @@ def start_program(db_name: str = "coaching.db"):
             sys.exit() 
 
 
+def export_table_to_json(db_name: str, table_name: str, output_filename: str = None) -> List[Dict[str, Any]] | None:
+    """
+    Извлекает все записи из указанной таблицы и возвращает их в виде списка словарей.
+    При желании сохраняет данные в файл JSON.
+    """
+    conn = None
+    try:
+        conn = get_connection(db_name)
+        # Устанавливаем row_factory для получения результатов в виде словарей (ключ=имя_столбца)
+        conn.row_factory = sqlite3.Row 
+        cursor = conn.cursor()
+        
+        # Запрос для выбора всех данных из таблицы
+        # Используем подстановку имени таблицы f-строкой (с осторожностью, так как это не данные)
+        sql_query = f"SELECT * FROM {table_name}" 
+        cursor.execute(sql_query)
+        
+        # Преобразуем объект Row в обычный словарь
+        records = [dict(row) for row in cursor.fetchall()]
+        
+        if not records:
+            print(f"ℹ️ Таблица '{table_name}' пуста или не существует.")
+            return None
+        
+        # Сохранение в файл JSON, если указано имя файла
+        if output_filename:
+            with open(output_filename, 'w', encoding='utf-8') as f:
+                # Преобразуем список словарей в JSON-строку
+                json.dump(records, f, ensure_ascii=False, indent=4)
+            print(f"✅ Данные из таблицы '{table_name}' успешно экспортированы в файл: {output_filename}")
+        
+        return records
+
+    except sqlite3.OperationalError as e:
+        print(f"❌ Ошибка: Не удалось выполнить SQL-запрос. Возможно, таблицы '{table_name}' не существует. ({e})")
+        return None
+    except Exception as e:
+        print(f"❌ Произошла ошибка при экспорте: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
 # =================================================================
 # === 6. ТОЧКА ЗАПУСКА ===
 # =================================================================
@@ -782,3 +826,28 @@ if __name__ == '__main__':
         
     except Exception as e:
         print(f"Критическая ошибка программы: {e}")
+
+    # 1. Извлечь данные из таблицы User и сохранить в файл
+    print("\n--- Экспорт таблицы 'User' ---")
+    user_data = export_table_to_json(
+        db_name=DB_NAME, 
+        table_name="User", 
+        output_filename="users_export.json"
+    )
+
+    if user_data:
+        # Для отображения в консоли
+        print("\n--- Извлеченные данные (первые 2 записи) ---")
+        print(json.dumps(user_data[:2], indent=4, ensure_ascii=False))
+
+    # 2. Извлечь данные из таблицы Inventory без сохранения в файл
+    print("\n--- Экспорт таблицы 'Inventory' (без сохранения в файл) ---")
+    inventory_data = export_table_to_json(
+        db_name=DB_NAME,
+        table_name="Inventory",
+        output_filename=None # Не сохраняем в файл
+    )
+    
+    if inventory_data:
+        print("\n--- Извлеченные данные Inventory ---")
+        print(json.dumps(inventory_data, indent=4, ensure_ascii=False))

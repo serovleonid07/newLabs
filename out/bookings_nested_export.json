@@ -1,0 +1,58 @@
+[
+    {
+        "id": 1,
+        "number": 1,
+        "time_start": "2025-11-5 20:23:30",
+        "time_end": "2025-11-5 21:23:30",
+        "coach": {
+            "id": 3,
+            "internal_number": 102,
+            "surname": "Серов",
+            "name": "Леонид"
+        },
+        "user": {
+            "id": 2,
+            "surname": "Серова",
+            "name": "Валерия"
+        },
+        "inventory_items": [
+            {
+                "inventory_id": 10,
+                "name": "Велотренажер",
+                "count_available": 5,
+                "status": {
+                    "status_id": 1,
+                    "name": "Забронировано"
+                }
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "number": 2,
+        "time_start": "2025-11-5 20:25:30",
+        "time_end": "2025-11-5 21:25:30",
+        "coach": {
+            "id": 4,
+            "internal_number": 103,
+            "surname": "Смаев",
+            "name": "Кирилл"
+        },
+        "user": {
+            "id": 6,
+            "surname": "Мартынов",
+            "name": "Дмитрий"
+        },
+        "inventory_items": [
+            {
+                "inventory_id": 12,
+                "name": "Беговая дорожка",
+                "count_available": 5,
+                "status": {
+                    "status_id": 1,
+                    "name": "Забронировано"
+                }
+            }
+        ]
+    }
+]
