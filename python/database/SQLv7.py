@@ -4,6 +4,10 @@ from datetime import datetime
 from typing import Dict, Tuple, Callable, List, Any
 import sys
 import json
+import csv
+import os
+import yaml
+import xml.etree.ElementTree as ET
 
 # =================================================================
 # === 1. УПРАВЛЕНИЕ БД: СОЕДИНЕНИЕ, СТРУКТУРА И ДАННЫЕ (Utility) ===
@@ -174,6 +178,24 @@ def insert_sample_data(db_name: str = "coaching.db"):
 # === 2. ФУНКЦИИ ПРОСМОТРА (Utility) ===
 # =================================================================
 
+def indent(elem, level=0):
+    """
+    Добавляет отступы (пробелы) к XML-элементам для "красивого" вывода (pretty-print).
+    """
+    i = "\n" + level * "  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            indent(elem, level + 1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+            
 def display_all_bookings_details(conn: Connection) -> bool:
     cursor = conn.cursor()
     cursor.execute("""
@@ -616,13 +638,224 @@ def modify_inventory_from_console(db_name: str = "coaching.db"):
         
     conn.close()
 
+
+OUTPUT_DIR = "out" # <-- Добавить это
+
+def ensure_output_directory(path: str): # <-- Добавить это
+    """Создает директорию для экспорта, если она еще не существует."""
+    os.makedirs(path, exist_ok=True)
+
+
+def export_table_to_file(db_name: str):
+    """Универсальный экспорт одной таблицы в JSON, CSV, YAML или XML."""
+    
+    print("\n--- Универсальный экспорт таблицы ---")
+    
+    table_name = input("Введите имя таблицы (User, Coach, Inventory): ")
+    if not table_name: return
+    
+    file_format = input("Выберите формат (json / csv / yaml / xml): ").lower() # <-- Обновлено
+    if file_format not in ['json', 'csv', 'yaml', 'xml']: # <-- Обновлено
+        print("❌ Неподдерживаемый формат. Выберите 'json', 'csv', 'yaml' или 'xml'."); return
+
+    output_filename = f"{table_name.lower()}.{file_format}"
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+    
+    ensure_output_directory(OUTPUT_DIR)
+
+    conn = None
+    try:
+        conn = get_connection(db_name)
+        conn.row_factory = sqlite3.Row 
+        cursor = conn.cursor()
+        
+        sql_query = f"SELECT * FROM {table_name}" 
+        cursor.execute(sql_query)
+        
+        column_names = [description[0] for description in cursor.description]
+        records = cursor.fetchall()
+
+        if not records:
+            print(f"ℹ️ Таблица '{table_name}' пуста или не существует."); return
+            
+        # Преобразование в список словарей для универсальности экспорта
+        data_to_export = [dict(row) for row in records]
+
+        if file_format == 'json':
+            # Сериализация в JSON
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(data_to_export, f, ensure_ascii=False, indent=4)
+            print(f"✅ Плоский экспорт '{table_name}' (JSON) завершен. Файл: {output_path}")
+
+        elif file_format == 'csv':
+            # Сериализация в CSV (с использованием заголовков и разделителя ;)
+            # ... (Оставить вашу существующую логику CSV) ...
+            with open(output_path, 'w', encoding='utf-8', newline='') as f:
+                csv_writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                csv_writer.writerow(column_names)
+                # records все еще доступны как Row объекты/кортежи
+                csv_writer.writerows(records) 
+            print(f"✅ Плоский экспорт '{table_name}' (CSV) завершен. Файл: {output_path}")
+
+        elif file_format == 'yaml':
+            # Сериализация в YAML
+            with open(output_path, 'w', encoding='utf-8') as f:
+                yaml.dump(data_to_export, f, allow_unicode=True, indent=4, sort_keys=False) # sort_keys=False сохраняет порядок
+            print(f"✅ Плоский экспорт '{table_name}' (YAML) завершен. Файл: {output_path}")
+
+        elif file_format == 'xml':
+            # Сериализация в XML с использованием ElementTree
+            root = ET.Element(table_name)
+            for item in data_to_export:
+                record_element = ET.SubElement(root, table_name[:-1] if table_name.endswith('s') else "record") # Используем 'record' или форму единственного числа
+                for key, value in item.items():
+                    field_element = ET.SubElement(record_element, key)
+                    field_element.text = str(value)
+            
+            tree = ET.ElementTree(root)
+            with open(output_path, 'wb') as f: # Используем 'wb' для записи байтов, так как ET.write требует этого
+                tree.write(f, encoding='utf-8', xml_declaration=True)
+                
+            print(f"✅ Плоский экспорт '{table_name}' (XML) завершен. Файл: {output_path}")
+
+
+    except sqlite3.OperationalError as e:
+        print(f"❌ Ошибка SQL: Таблицы '{table_name}' не существует. ({e})")
+    except ImportError:
+        print("❌ Ошибка: Библиотека PyYAML не установлена. Пожалуйста, установите ее (pip install pyyaml).")
+    except Exception as e:
+        print(f"❌ Произошла ошибка при экспорте: {e}")
+    finally:
+        if conn: conn.close()
+
+
+def export_nested_booking_to_file(db_name: str):
+    """
+    Извлекает данные о бронированиях с вложенной информацией 
+    о Тренере, Пользователе и Инвентаре и экспортирует их в JSON, YAML или XML.
+    """
+    
+    print("\n--- Вложенный экспорт бронирований ---")
+    
+    file_format = input("Выберите формат (json / yaml / xml): ").lower()
+    if file_format not in ['json', 'yaml', 'xml']:
+        print("❌ Неподдерживаемый формат. Выберите 'json', 'yaml' или 'xml'."); return
+
+    output_filename = f"bookings_nested_export.{file_format}"
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+    
+    ensure_output_directory(OUTPUT_DIR)
+
+    conn = None
+    try:
+        conn = get_connection(db_name)
+        conn.row_factory = sqlite3.Row 
+        cursor = conn.cursor()
+        
+        # 1. Получение основных данных бронирований (то же, что и ранее)
+        cursor.execute("""
+            SELECT 
+                B.Booking_ID, B.Time_start, B.Time_end, B.Number_booking,
+                C.Coach_ID, C.Internal_number, C.Surname AS Coach_Surname, C.Name AS Coach_Name,
+                U.User_ID, U.Surname AS User_Surname, U.Name AS User_Name
+            FROM Booking B
+            JOIN Coach C ON B.Coach_ID = C.Coach_ID
+            JOIN User U ON B.User_ID = U.User_ID
+            ORDER BY B.Booking_ID
+        """)
+        main_bookings = [dict(row) for row in cursor.fetchall()]
+
+        if not main_bookings: print("ℹ️ Таблица 'Booking' пуста."); return
+
+        bookings_dict = {}
+        for row in main_bookings:
+            booking_id = row['Booking_ID']
+            coach_details = {'id': row.pop('Coach_ID'), 'internal_number': row.pop('Internal_number'), 'surname': row.pop('Coach_Surname'), 'name': row.pop('Coach_Name')}
+            user_details = {'id': row.pop('User_ID'), 'surname': row.pop('User_Surname'), 'name': row.pop('User_Name')}
+            
+            bookings_dict[booking_id] = {
+                'id': row.pop('Booking_ID'), 'number': row.pop('Number_booking'),
+                'time_start': row.pop('Time_start'), 'time_end': row.pop('Time_end'),
+                'coach': coach_details, 
+                'user': user_details, 
+                'inventory_items': []
+            }
+
+        # 2. Получение деталей инвентаря и вложение (то же, что и ранее)
+        cursor.execute("""
+            SELECT BI.Booking_ID, I.Inventory_ID, I.Name AS Inventory_Name, I.Count, S.Status_ID, S.Name AS Status_Name
+            FROM Booking_inventory BI
+            JOIN Inventory I ON BI.Inventory_ID = I.Inventory_ID
+            JOIN Status S ON BI.Status_ID = S.Status_ID
+        """)
+        inventory_records = [dict(row) for row in cursor.fetchall()]
+
+        for row in inventory_records:
+            booking_id = row.pop('Booking_ID')
+            if booking_id in bookings_dict:
+                item_details = {
+                    'inventory_id': row.pop('Inventory_ID'), 'name': row.pop('Inventory_Name'),
+                    'count_available': row.pop('Count'),
+                    'status': {'status_id': row.pop('Status_ID'), 'name': row.pop('Status_Name')}
+                }
+                bookings_dict[booking_id]['inventory_items'].append(item_details)
+
+        final_records = list(bookings_dict.values())
+        
+        # 3. Сохранение в выбранный файл
+        if file_format == 'json':
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(final_records, f, ensure_ascii=False, indent=4)
+        
+        elif file_format == 'yaml':
+            with open(output_path, 'w', encoding='utf-8') as f:
+                yaml.dump(final_records, f, allow_unicode=True, indent=4, sort_keys=False)
+
+        elif file_format == 'xml':
+            # Вспомогательная функция для рекурсивного создания XML
+            def dict_to_xml(tag, d):
+                # ... (Ваша реализация dict_to_xml)
+                elem = ET.Element(tag)
+                # ... (логика заполнения элементов)
+                return elem # <--- Убедитесь, что тут есть return
+
+            root = ET.Element("bookings")
+            for booking in final_records:
+                # 1. Создание и добавление элемента booking
+                root.append(dict_to_xml("booking", booking))
+                
+            
+            # 2. ❗ КРИТИЧЕСКИЙ ШАГ: Вызываем функцию форматирования
+            indent(root) 
+            
+            tree = ET.ElementTree(root)
+            with open(output_path, 'wb') as f: 
+                # 3. Запись дерева в файл
+                tree.write(f, encoding='utf-8', xml_declaration=True)
+                
+            print(f"✅ Вложенный экспорт бронирований (XML) завершен. Файл: {output_path}")
+
+            root = ET.Element("bookings")
+            for booking in final_records:
+                root.append(dict_to_xml("booking", booking))
+                
+            tree = ET.ElementTree(root)
+            # Используем 'wb' для записи байтов
+            with open(output_path, 'wb') as f:
+                tree.write(f, encoding='utf-8', xml_declaration=True)
+
+        print(f"✅ Вложенный экспорт бронирований ({file_format.upper()}) завершен. Файл: {output_path}")
+
+    except Exception as e:
+        print(f"❌ Произошла ошибка при вложенном экспорте: {e}")
+    finally:
+        if conn: conn.close()
+        
 # =================================================================
-# === 4. КАРТА ДЕЙСТВИЙ И ПОЛИТИКА РОЛЕЙ (ОСНОВА ДИНАМИЧЕСКОГО МЕНЮ) ===
+# === 5. КАРТА ДЕЙСТВИЙ И ПОЛИТИКА РОЛЕЙ (ОСНОВА ДИНАМИЧЕСКОГО МЕНЮ) ===
 # =================================================================
 
-# Карта действий, связывающая ключ с описанием и функцией
 ACTION_MAP: Dict[str, Tuple[str, Callable]] = {
-    # (Описание в меню, Функция для вызова)
     "ADD_COACH": ("Добавить нового Тренера", add_coach_from_console),
     "ADD_USER": ("Добавить нового Пользователя", add_user_from_console),
     "MODIFY_USER": ("Изменить данные Пользователя", modify_user_from_console),
@@ -630,14 +863,16 @@ ACTION_MAP: Dict[str, Tuple[str, Callable]] = {
     "MODIFY_INVENTORY": ("Изменить данные Инвентаря", modify_inventory_from_console),
     "ADD_BOOKING": ("Добавить новое Бронирование", add_booking_from_console),
     "MODIFY_BOOKING": ("Изменить существующее Бронирование", modify_booking_from_console),
+    "EXPORT_FLAT": ("Экспорт таблицы (плоский JSON/CSV/YAML/XML)", export_table_to_file),
+    "EXPORT_NESTED": ("Экспорт Бронирований (вложенный JSON/YAML/XML)", export_nested_booking_to_file),
 }
 
-# Определяем, какие КЛЮЧИ действий доступны для каждой роли
 ROLE_POLICY: Dict[str, List[str]] = {
     "Администратор": [
         "ADD_COACH", "ADD_USER", "MODIFY_USER", 
         "ADD_INVENTORY", "MODIFY_INVENTORY", 
-        "ADD_BOOKING", "MODIFY_BOOKING"
+        "ADD_BOOKING", "MODIFY_BOOKING", 
+        "EXPORT_FLAT", "EXPORT_NESTED"
     ],
     "Тренер": [
         "ADD_BOOKING", "MODIFY_BOOKING"
@@ -648,61 +883,38 @@ ROLE_POLICY: Dict[str, List[str]] = {
 }
 
 # =================================================================
-# === 5. АУТЕНТИФИКАЦИЯ И МЕНЮ (Ядро) ===
+# === 6. АУТЕНТИФИКАЦИЯ И МЕНЮ ===
 # =================================================================
 
 def authenticate_user(db_name: str, username: str, password: str) -> str | None:
-    """Проверяет логин/пароль и возвращает роль."""
     conn = get_connection(db_name)
     cursor = conn.cursor()
     role = None
-    
     try:
-        # 1. Администратор (логин: 'admin', Internal_number 999)
         if username.lower() == 'admin':
             cursor.execute("SELECT Coach_ID FROM Coach WHERE Internal_number = 999 AND Password = ?", (password,))
-            if cursor.fetchone():
-                role = "Администратор"
-                
-        # 2. Тренер (логин: Internal_number)
+            if cursor.fetchone(): role = "Администратор"
         elif not role:
             try:
                 internal_number = int(username)
                 cursor.execute("SELECT Coach_ID FROM Coach WHERE Internal_number = ? AND Password = ?", (internal_number, password))
-                if cursor.fetchone():
-                    role = "Тренер"
-            except ValueError:
-                pass 
-
-        # 3. Пользователь (логин: User_ID)
+                if cursor.fetchone(): role = "Тренер"
+            except ValueError: pass 
         if not role:
             try:
                 user_id = int(username)
                 cursor.execute("SELECT User_ID FROM User WHERE User_ID = ? AND Password = ?", (user_id, password))
-                if cursor.fetchone():
-                    role = "Пользователь"
-            except ValueError:
-                pass 
-                
-    except Exception as e:
-        print(f"❌ Ошибка БД при аутентификации: {e}")
-        
-    finally:
-        conn.close()
-        
+                if cursor.fetchone(): role = "Пользователь"
+            except ValueError: pass 
+    except Exception as e: print(f"❌ Ошибка БД при аутентификации: {e}")
+    finally: conn.close()
     return role
 
 
 def main_menu(db_name: str, current_user_role: str):
-    """
-    Динамически строит и обрабатывает меню на основе роли пользователя.
-    """
-    if current_user_role not in ROLE_POLICY:
-        print("Ошибка: Неизвестная роль.")
-        return
+    if current_user_role not in ROLE_POLICY: print("Ошибка: Неизвестная роль."); return
 
     allowed_action_keys = ROLE_POLICY[current_user_role]
-    
     current_menu_actions = {}
     i = 1
     
@@ -715,35 +927,29 @@ def main_menu(db_name: str, current_user_role: str):
         print("\n" + "="*40)
         print(f" 💻 МЕНЮ: {current_user_role.upper()}")
         print("="*40)
-        
-        for key, (description, _) in current_menu_actions.items():
-            print(f"{key}. {description}") 
-            
+        for key, (description, _) in current_menu_actions.items(): print(f"{key}. {description}") 
         print("0. Выход/Смена пользователя")
         print("="*40)
         
         choice = input("Выберите действие: ")
         
         if choice == '0':
-            print(f"\nВыход из системы. До свидания!")
-            break
+            print(f"\nВыход из системы. До свидания!"); break
         elif choice in current_menu_actions:
             function_to_call = current_menu_actions[choice][1]
-            # Все функции в ACTION_MAP принимают db_name
             function_to_call(db_name) 
         else:
             print("Некорректный ввод. Пожалуйста, выберите номер из списка.")
 
 
 def start_program(db_name: str = "coaching.db"):
-    """Основная точка входа с циклом аутентификации."""
     while True:
         print("\n" + "="*40)
         print(" 🏋️ СИСТЕМА УПРАВЛЕНИЯ КОУЧИНГОМ")
         print("="*40)
         print("Подсказки для входа:")
         print(" - **Админ**: Логин=admin, Пароль=admin_pass")
-        print(" - Тренер (Иванов): Логин=101, Пароль=pass101")
+        print(" - Тренер (Сидорова): Логин=102, Пароль=pass102")
         print(" - Пользователь (Климов): Логин=1, Пароль=userpass1")
         
         username = input("Введите Логин: ")
@@ -760,94 +966,20 @@ def start_program(db_name: str = "coaching.db"):
         continue_choice = input("Хотите попробовать войти снова? (д/н): ").lower()
         if continue_choice != 'д':
             print("\nЗавершение программы.")
-            # sys.exit() лучше использовать только в самом конце, чтобы программа не прерывалась
-            # в интерактивной среде, но для консольного приложения это стандартный подход.
             sys.exit() 
 
 
-def export_table_to_json(db_name: str, table_name: str, output_filename: str = None) -> List[Dict[str, Any]] | None:
-    """
-    Извлекает все записи из указанной таблицы и возвращает их в виде списка словарей.
-    При желании сохраняет данные в файл JSON.
-    """
-    conn = None
-    try:
-        conn = get_connection(db_name)
-        # Устанавливаем row_factory для получения результатов в виде словарей (ключ=имя_столбца)
-        conn.row_factory = sqlite3.Row 
-        cursor = conn.cursor()
-        
-        # Запрос для выбора всех данных из таблицы
-        # Используем подстановку имени таблицы f-строкой (с осторожностью, так как это не данные)
-        sql_query = f"SELECT * FROM {table_name}" 
-        cursor.execute(sql_query)
-        
-        # Преобразуем объект Row в обычный словарь
-        records = [dict(row) for row in cursor.fetchall()]
-        
-        if not records:
-            print(f"ℹ️ Таблица '{table_name}' пуста или не существует.")
-            return None
-        
-        # Сохранение в файл JSON, если указано имя файла
-        if output_filename:
-            with open(output_filename, 'w', encoding='utf-8') as f:
-                # Преобразуем список словарей в JSON-строку
-                json.dump(records, f, ensure_ascii=False, indent=4)
-            print(f"✅ Данные из таблицы '{table_name}' успешно экспортированы в файл: {output_filename}")
-        
-        return records
-
-    except sqlite3.OperationalError as e:
-        print(f"❌ Ошибка: Не удалось выполнить SQL-запрос. Возможно, таблицы '{table_name}' не существует. ({e})")
-        return None
-    except Exception as e:
-        print(f"❌ Произошла ошибка при экспорте: {e}")
-        return None
-    finally:
-        if conn:
-            conn.close()
-
 # =================================================================
-# === 6. ТОЧКА ЗАПУСКА ===
+# === 7. ТОЧКА ЗАПУСКА ===
 # =================================================================
 
 if __name__ == '__main__':
     DB_NAME = "coaching.db"
     
     try:
-        # 1. Инициализация БД
         create_tables(DB_NAME)
-        # 2. Вставка тестовых данных 
         insert_sample_data(DB_NAME)
-        
-        # 3. Запуск программы
         start_program(DB_NAME)
         
     except Exception as e:
         print(f"Критическая ошибка программы: {e}")
-
-    # 1. Извлечь данные из таблицы User и сохранить в файл
-    print("\n--- Экспорт таблицы 'User' ---")
-    user_data = export_table_to_json(
-        db_name=DB_NAME, 
-        table_name="User", 
-        output_filename="users_export.json"
-    )
-
-    if user_data:
-        # Для отображения в консоли
-        print("\n--- Извлеченные данные (первые 2 записи) ---")
-        print(json.dumps(user_data[:2], indent=4, ensure_ascii=False))
-
-    # 2. Извлечь данные из таблицы Inventory без сохранения в файл
-    print("\n--- Экспорт таблицы 'Inventory' (без сохранения в файл) ---")
-    inventory_data = export_table_to_json(
-        db_name=DB_NAME,
-        table_name="Inventory",
-        output_filename=None # Не сохраняем в файл
-    )
-    
-    if inventory_data:
-        print("\n--- Извлеченные данные Inventory ---")
-        print(json.dumps(inventory_data, indent=4, ensure_ascii=False))
