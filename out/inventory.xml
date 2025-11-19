@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<InventoryList>
+  <Inventory>
+    <Inventory_ID>1</Inventory_ID>
+    <Name>Штанга 20кг</Name>
+    <Count>5</Count>
+  </Inventory>
+  <Inventory>
+    <Inventory_ID>2</Inventory_ID>
+    <Name>Гантели 5кг</Name>
+    <Count>10</Count>
+  </Inventory>
+  <Inventory>
+    <Inventory_ID>3</Inventory_ID>
+    <Name>Коврик для йоги</Name>
+    <Count>20</Count>
+  </Inventory>
+</InventoryList>

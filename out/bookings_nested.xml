@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Bookings>
+  <Booking>
+    <Booking_ID>1</Booking_ID>
+    <Number_booking>1001</Number_booking>
+    <Time_start>2025-11-19 23:48:01</Time_start>
+    <Time_end>2025-12-31 15:00:00</Time_end>
+    <Coach>Иванов Петр (101)</Coach>
+    <User>Климов Алексей</User>
+    <InventoryList>
+      <Item>Штанга 20кг (Статус: В использовании)</Item>
+    </InventoryList>
+  </Booking>
+  <Booking>
+    <Booking_ID>2</Booking_ID>
+    <Number_booking>1002</Number_booking>
+    <Time_start>2025-11-19 23:48:01</Time_start>
+    <Time_end>2025-12-31 15:00:00</Time_end>
+    <Coach>Серов Леонид (102)</Coach>
+    <User>Серова Валерия</User>
+    <InventoryList>
+      <Item>Коврик для йоги (Статус: Забронировано)</Item>
+    </InventoryList>
+  </Booking>
+</Bookings>
