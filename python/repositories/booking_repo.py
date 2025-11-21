@@ -1,6 +1,6 @@
 # repositories/booking_repo.py
 from .base_repo import BaseRepository
-from db_config import get_connection # Импортируем для ручного управления транзакциями
+from db_config import get_connection
 from utils import ensure_output_directory, indent
 from typing import Dict, Any, List, Optional
 import sqlite3
@@ -12,17 +12,12 @@ import os
 
 class BookingRepository(BaseRepository):
 
-    # =================================================================
-    # === CRUD: ДОБАВЛЕНИЕ (TRANSACTIONAL) ===
-    # =================================================================
-
     def add_booking(self, booking_data: Dict[str, Any], inventory_ids: List[int]) -> bool:
         """
         Добавляет бронирование и связывает его с инвентарем в рамках одной транзакции.
         """
         conn = None
         try:
-            # Ручное управление соединением для транзакции
             conn = get_connection(self._db_name)
             cursor = conn.cursor()
 
@@ -40,7 +35,6 @@ class BookingRepository(BaseRepository):
             new_booking_id = cursor.lastrowid
 
             # 2. Добавление инвентаря к бронированию (Статус "Забронировано" = ID 1)
-            # Внимание: здесь предполагается, что Status.Status_ID=1 соответствует "Забронировано"
             sql_inventory = "INSERT INTO Booking_inventory (Booking_ID, Inventory_ID, Status_ID) VALUES (?, ?, 1)"
             
             for inventory_id in inventory_ids:
@@ -79,10 +73,6 @@ class BookingRepository(BaseRepository):
         """Получает бронирование по ID."""
         return self.get_by_id("Booking", "Booking_ID", booking_id)
 
-    # =================================================================
-    # === READ: ВЫВОД ДЕТАЛЕЙ ===
-    # =================================================================
-
     def display_all_bookings_details(self) -> List[Dict[str, Any]]:
         """Возвращает все бронирования с деталями тренера, пользователя и инвентаря."""
         sql = """
@@ -101,12 +91,10 @@ class BookingRepository(BaseRepository):
         """
         rows = self._execute_query(sql)
         
-        # Группировка данных (если одно бронирование имеет несколько инвентарей)
         grouped_bookings = {}
         for row in rows:
             booking_id = row['Booking_ID']
             if booking_id not in grouped_bookings:
-                # Инициализация новой записи о бронировании
                 grouped_bookings[booking_id] = {
                     'Booking_ID': row['Booking_ID'],
                     'Number_booking': row['Number_booking'],
@@ -116,8 +104,7 @@ class BookingRepository(BaseRepository):
                     'User': f"{row['User_Surname']} {row['User_Name']}",
                     'Inventory_list': []
                 }
-            
-            # Добавление инвентаря к списку, если он существует
+
             if row['Inventory_Name']:
                 grouped_bookings[booking_id]['Inventory_list'].append(
                     f"{row['Inventory_Name']} (Статус: {row['Status_Name']})"
@@ -125,19 +112,12 @@ class BookingRepository(BaseRepository):
 
         return list(grouped_bookings.values())
 
-
-    # =================================================================
-    # === ЭКСПОРТ (FLAT Export) ===
-    # =================================================================
-
     def export_table_to_file(self, table_name: str, file_format: str):
         """Универсальный экспорт одной таблицы в JSON, CSV, YAML или XML."""
         
         output_filename = f"{table_name.lower()}.{file_format}"
         output_path = os.path.join("out", output_filename)
         ensure_output_directory()
-
-        # Используем метод базового репозитория
         records = self.get_all(table_name) 
         if not records:
             print(f"ℹ️ Таблица '{table_name}' пуста.")
@@ -201,8 +181,6 @@ class BookingRepository(BaseRepository):
         output_filename = f"bookings_nested.{file_format}"
         output_path = os.path.join("out", output_filename)
         ensure_output_directory()
-
-        # Получаем детали бронирований (уже сгруппированные)
         bookings = self.display_all_bookings_details()
         if not bookings:
             print("ℹ️ Нет данных для экспорта.")

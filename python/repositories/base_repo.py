@@ -43,7 +43,6 @@ class BaseRepository:
         """Возвращает все записи из указанной таблицы."""
         sql = f"SELECT * FROM {table_name}"
         rows = self._execute_query(sql)
-        # Преобразуем sqlite3.Row в стандартные словари для удобства
         return [dict(row) for row in rows]
     
     def get_by_id(self, table_name: str, id_col: str, item_id: int) -> Optional[Dict[str, Any]]:

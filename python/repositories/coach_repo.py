@@ -18,8 +18,6 @@ class CoachRepository(BaseRepository):
         sql = "SELECT * FROM Coach WHERE Internal_number = ?"
         rows = self._execute_query(sql, (num,))
         return [dict(row) for row in rows]
-
-    # ... Добавить остальные CRUD методы для Coach
     
     def display_all_coaches_details(self) -> List[Dict[str, Any]]:
         """Возвращает все детали тренеров, маскируя пароль."""

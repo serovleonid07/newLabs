@@ -9,11 +9,9 @@ from repositories.inventory_repo import InventoryRepository
 from repositories.booking_repo import BookingRepository
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-# =================================================================
-# === 1. ИНИЦИАЛИЗАЦИЯ РЕПОЗИТОРИЕВ ===
-# =================================================================
 
-# Создаем словарь для хранения репозиториев, чтобы не создавать их много раз
+# 1. ИНИЦИАЛИЗАЦИЯ РЕПОЗИТОРИЕВ
+
 REPOSITORIES: Dict[str, Any] = {}
 
 def initialize_repositories(db_name: str):
@@ -26,9 +24,7 @@ def initialize_repositories(db_name: str):
         'Booking': BookingRepository(db_name),
     }
 
-# =================================================================
-# === 2. ФУНКЦИИ ВВОДА/ВЫВОДА (UI Handlers) ===
-# =================================================================
+# 2. ФУНКЦИИ ВВОДА/ВЫВОДА (UI Handlers)
 
 def display_inventory_list() -> List[Dict[str, Any]]:
     """Показывает доступный инвентарь и возвращает его список."""
@@ -205,12 +201,6 @@ def delete_data():
         print("❌ Неверный выбор.")
 
 
-
-
-# ... (Остальные функции добавления/изменения переносятся сюда, 
-# вызывая соответствующие методы репозиториев, например: 
-# REPOSITORIES['Coach'].add_coach(coach_data))
-
 def display_users():
     """Выводит детали всех пользователей."""
     print("\n--- Список пользователей ---")
@@ -271,9 +261,8 @@ def export_nested_booking():
     REPOSITORIES['Booking'].export_nested_booking_to_file(file_format)
 
 
-# =================================================================
-# === 3. МЕНЮ И РОЛИ (Menu & Policy) ===
-# =================================================================
+
+# 3. МЕНЮ И РОЛИ (Menu & Policy)
 
 # Карта действий (Action Map)
 ACTION_MAP: Dict[str, Tuple[str, Callable]] = {
@@ -298,8 +287,8 @@ ACTION_MAP: Dict[str, Tuple[str, Callable]] = {
 # Политика доступа (Role Policy)
 ROLE_POLICY: Dict[str, List[str]] = {
     'Admin': ["ADD_U", "ADD_C", "ADD_B", "ADD_I","MODIFY","DELETE", "SHOW_U", "SHOW_C", "SHOW_B", "EXP_FLAT", "EXP_NESTED", "EXIT"],
-    'Coach': ["SHOW_C", "SHOW_B", "EXP_NESTED", "EXIT"],
-    'User': ["SHOW_B", "EXIT"],
+    'Coach': ["ADD_U", "ADD_B", "SHOW_C", "SHOW_B", "SHOW_U", "EXIT"],
+    'User': ["ADD_B", "SHOW_B", "EXIT"],
 }
 
 
@@ -334,10 +323,7 @@ def main_menu(current_user_role: str):
     else:
         print("❌ Некорректный ввод. Пожалуйста, выберите номер из списка.")
 
-
-# =================================================================
-# === 4. ТОЧКА ЗАПУСКА ===
-# =================================================================
+# 4. ТОЧКА ЗАПУСКА
 
 def start_program(db_name: str = "coaching.db"):
     # 1. Инициализация БД и данных

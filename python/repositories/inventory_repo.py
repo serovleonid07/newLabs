@@ -4,16 +4,12 @@ from typing import Dict, Any, Optional
 
 class InventoryRepository(BaseRepository):
     
-    # === Inventory CRUD ===
     def add_inventory(self, inventory_data: Dict[str, Any]) -> bool:
         """Добавляет новый инвентарь."""
         sql = "INSERT INTO Inventory (Name, Count) VALUES (?, ?)"
         params = (inventory_data['Name'], inventory_data['Count'])
         return self._execute_non_query(sql, params)
 
-    # ... Добавить остальные CRUD методы для Inventory
-
-    # === Status CRUD ===
     def add_status(self, status_data: Dict[str, Any]) -> bool:
         """Добавляет новый статус."""
         sql = "INSERT INTO Status (Name) VALUES (?)"
@@ -39,7 +35,6 @@ class InventoryRepository(BaseRepository):
         """Получает инвентарь по ID."""
         return self.get_by_id("Inventory", "Inventory_ID", inventory_id)
 
-    # Для Status тоже добавим CRUD
     def update_status(self, status_id: int, status_data: Dict[str, Any]) -> bool:
         """Обновляет статус."""
         sql = "UPDATE Status SET Name = ? WHERE Status_ID = ?"

@@ -2,9 +2,9 @@ import os
 import xml.etree.ElementTree as ET
 from typing import Optional 
 
-# =================================================================
-# === 1. УТИЛИТЫ ДЛЯ ВВОДА (Input Validation) ===
-# =================================================================
+
+# 1. УТИЛИТЫ ДЛЯ ВВОДА (Input Validation) ы
+
 
 def get_validated_input(prompt: str, min_len: int = 1, max_len: int = 50) -> str:
     """
@@ -36,9 +36,7 @@ def get_int_input(prompt: str) -> Optional[int]:
             print("❌ Некорректный ввод. Пожалуйста, введите целое число.")
 
 
-# =================================================================
-# === 2. УТИЛИТЫ ДЛЯ ЭКСПОРТА ===
-# =================================================================
+# 2. УТИЛИТЫ ДЛЯ ЭКСПОРТА
 
 def ensure_output_directory(path: str = "out"):
     """Создает директорию для экспорта, если она еще не существует."""
@@ -52,12 +50,9 @@ def indent(elem, level=0):
     """
     Добавляет отступы (пробелы) к XML-элементам для "красивого" вывода (pretty-print).
     """
-    # Используем встроенный метод, если доступен (Python 3.9+)
     if hasattr(ET, 'indent'):
         ET.indent(elem)
         return
-
-    # Ручная реализация для старых версий Python
     i = "\n" + level * "  "
     if len(elem):
         if not elem.text or not elem.text.strip():

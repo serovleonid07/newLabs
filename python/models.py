@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-# =================================================================
-# === СТРУКТУРЫ ДАННЫХ (МОДЕЛИ) ===
-# =================================================================
+
+# СТРУКТУРЫ ДАННЫХ (МОДЕЛИ)
+
 
 @dataclass
 class User:
@@ -35,7 +35,7 @@ class Inventory:
     """Модель Инвентаря."""
     inventory_id: Optional[int]
     name: str
-    count: int # Доступное количество
+    count: int
 
 
 @dataclass
